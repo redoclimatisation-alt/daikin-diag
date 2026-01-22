@@ -40,7 +40,6 @@
     .small { font-size: 12.5px; color:#667085; }
     ol { margin: 8px 0 0 18px; }
     ul { margin: 8px 0 0 18px; }
-    code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12.5px; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12.5px; white-space: pre-wrap; }
     .kpi { display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
     @media (max-width: 980px){ .kpi { grid-template-columns: 1fr 1fr; } }
@@ -58,12 +57,12 @@
   <div class="card">
     <h1>Daikin – Diagnostic Résidentiel (Expert)</h1>
     <p class="sub">
-      Version site web simple (sans PWA). Inclut : <strong>arbre de décision</strong>, <strong>codes défaut détaillés</strong>, <strong>rapport d’intervention</strong> (copie/coller).
-      <br><span class="small">Note : les seuils “V/A/ΔT” ci-dessous sont des références terrain génériques. Les valeurs exactes “constructeur” peuvent varier selon série/modèle (FTXM/RXM, 2MXM/3MXM/4MXM) – à verrouiller si tu ajoutes des extraits de service manual.</span>
+      Version site web simple. Inclut : <strong>arbre de décision</strong>, <strong>codes défaut détaillés</strong>, <strong>rapport d’intervention</strong> (copie/coller).
+      <br><span class="small">Les seuils “V/A/ΔT” sont des références terrain génériques. Les valeurs exactes constructeur peuvent varier selon série/modèle.</span>
     </p>
 
     <div class="grid">
-      <!-- LEFT: inputs + outputs -->
+      <!-- LEFT -->
       <div class="box">
         <p class="title">1) Contexte intervention</p>
 
@@ -130,7 +129,7 @@
         <div class="row">
           <div>
             <label for="unom">Unom (V)</label>
-            <div class="hint">Base de plage : Unom ±10%.</div>
+            <div class="hint">Base : Unom ±10% (réglable).</div>
           </div>
           <select id="unom">
             <option value="">— choisir —</option>
@@ -156,7 +155,7 @@
         <div class="row">
           <div>
             <label for="inPlaque">In plaque UE (A)</label>
-            <div class="hint">Permet une plage terrain d’intensité (0,6×In → 1,3×In).</div>
+            <div class="hint">Plage terrain : 0,6×In → 1,3×In (réglable).</div>
           </div>
           <input id="inPlaque" type="number" step="0.1" placeholder="ex. 6.2" />
         </div>
@@ -227,20 +226,19 @@
         <hr>
 
         <p class="title">3) Arbre de décision (généré)</p>
-        <div class="small">Cet arbre se met à jour en fonction du <strong>code</strong> + tes <strong>mesures</strong>.</div>
+        <div class="small">Mise à jour selon <strong>code</strong> + <strong>mesures</strong>.</div>
         <div id="decisionTree" style="margin-top:10px;"></div>
 
         <hr>
 
         <p class="title">4) Code défaut (détails + contrôles)</p>
         <div id="codeDetails"></div>
-
       </div>
 
-      <!-- RIGHT: report + actions -->
+      <!-- RIGHT -->
       <div class="box sticky">
         <p class="title">Rapport d’intervention (copier/coller)</p>
-        <div class="small">Généré automatiquement. Tu peux l’envoyer au client ou le coller dans ton CR.</div>
+        <div class="small">Généré automatiquement.</div>
 
         <div class="actions" style="margin-top:10px;">
           <button class="btnPrimary" id="btnCopy" type="button">Copier le rapport</button>
@@ -257,6 +255,7 @@
 
         <details>
           <summary>Paramètres (plages terrain)</summary>
+
           <div class="row" style="grid-template-columns: 1fr 220px;">
             <div>
               <label for="vTol">Tolérance tension (%)</label>
@@ -297,9 +296,8 @@
             <input id="dtHeat" type="text" value="10-25" />
           </div>
 
-          <div class="small">Ces paramètres impactent uniquement les statuts OK/À vérifier. Ils ne remplacent pas les seuils spécifiques du service manual.</div>
+          <div class="small">Ces paramètres ne remplacent pas les seuils spécifiques du service manual.</div>
         </details>
-
       </div>
     </div>
   </div>
@@ -307,13 +305,10 @@
 
 <script>
 /* =========================
-   BASE CODES (Daikin résidentiel - sélection “terrain”)
-   =========================
-   Note : nomenclature et périmètre peuvent varier selon série. On privilégie une approche dépannage terrain.
-*/
+   Codes défaut (terrain) - base extensible
+   ========================= */
 const CODE_DB = [
-  // Communication / alimentation
-  { code:"U4", title:"Erreur communication UI↔UE", family:["mono","multi"], symptoms:["UI clignote", "pas de démarrage", "coupures"], checks:[
+  { code:"U4", title:"Erreur communication UI↔UE", family:["mono","multi"], checks:[
     "Vérifier câblage interconnexion (bornes, polarité, continuité, oxydation, serrage).",
     "Contrôler cheminement câble (éloignement puissance, parasites, terre).",
     "Multi : isoler une UI à la fois (déconnecter UI) pour identifier l’unité perturbatrice.",
@@ -326,7 +321,6 @@ const CODE_DB = [
     "Vérifier terre et neutre (qualité réseau)."
   ], actions:["Corriger alimentation", "Reprise serrage/section", "Contrôle réseau amont"] },
 
-  // Circuit frigo / performance
   { code:"U0", title:"Anomalie circuit frigorifique (manque charge/restriction)", family:["mono","multi"], checks:[
     "Inspection visuelle : traces d’huile, raccords, vannes service, capuchons, givre anormal.",
     "Contrôle performance : ΔT air, fonctionnement UE (ventilo, échangeur).",
@@ -336,31 +330,29 @@ const CODE_DB = [
 
   { code:"E3", title:"Haute pression / surpression", family:["mono","multi"], checks:[
     "Contrôler échangeur UE encrassé, dégagements, recyclage air chaud.",
-    "Contrôler ventilateur UE (démarrage, vitesse, sens, condensateur si présent).",
+    "Contrôler ventilateur UE (démarrage, vitesse, sens).",
     "Contrôler surcharge éventuelle, restriction, vannes service, capteur pression."
   ], actions:["Nettoyage UE", "Réparation ventilo UE", "Diagnostic frigo (charge/restriction/capteur)"] },
 
-  { code:"E4", title:"Basse pression / manque de débit frigo (selon séries)", family:["mono","multi"], checks:[
+  { code:"E4", title:"Basse pression (selon séries)", family:["mono","multi"], checks:[
     "Contrôle fuite/manque charge (traces huile).",
     "Contrôle débit air UI (filtres, turbine, échangeur).",
     "Si instrumenté : pressions basses cohérentes, surchauffe élevée."
   ], actions:["Recherche fuite + recharge", "Correction débit air", "Contrôle EEV/restriction"] },
 
-  // Inverter / puissance
   { code:"L5", title:"Surintensité inverter / protection IPM", family:["mono","multi"], checks:[
-    "Inspection carte inverter : traces échauffement, composants, connecteurs.",
+    "Inspection carte inverter : traces échauffement, connecteurs.",
     "Contrôle faisceau compresseur (sertissage, isolation, frottements).",
     "Contrôle isolement compresseur (mégohmmètre) + continuité enroulements si accessible.",
     "Vérifier alimentation (U stable) et masse/terre."
   ], actions:["Réparer faisceau/connexion", "Remplacer PCB inverter si défaut confirmé", "Remplacer compresseur si isolement faible"] },
 
-  { code:"L3", title:"Défaut thermique carte inverter / surchauffe (selon séries)", family:["mono","multi"], checks:[
-    "Contrôler ventilation du coffret et propreté.",
-    "Contrôler dissipateur / pâte thermique si applicable.",
-    "Contrôler charge / fonctionnement anormal provoquant échauffement."
-  ], actions:["Nettoyage/ventilation", "Diagnostic inverter", "Correction cause surchauffe"] },
+  { code:"L8", title:"Surcharge compresseur / protection", family:["mono","multi"], checks:[
+    "Contrôler alimentation, intensité, ventilation UE, charge/restriction.",
+    "Vérifier fonctionnement ventilateur UE.",
+    "Contrôler isolement si suspicion électrique."
+  ], actions:["Corriger cause surcharge", "Diagnostic inverter/compresseur"] },
 
-  // UI: antigivre, drainage
   { code:"A5", title:"Antigivre / protection échangeur UI", family:["mono","multi"], checks:[
     "Contrôler débit d’air UI : filtres, turbine, échangeur encrassé, vitesses.",
     "Contrôler position et fixation sonde échangeur UI (clip/isolant).",
@@ -373,7 +365,6 @@ const CODE_DB = [
     "Contrôler encrassement (biofilm) et fuites internes."
   ], actions:["Débouchage/nettoyage", "Remplacer pompe/capteur si HS", "Reprise évacuation"] },
 
-  // Sondes (UI/UE)
   { code:"C9", title:"Sonde air reprise UI", family:["mono","multi"], checks:[
     "Contrôler connectique PCB UI et câblage sonde.",
     "Mesurer résistance sonde (déconnectée si possible) et comparer table constructeur.",
@@ -398,27 +389,10 @@ const CODE_DB = [
     "Corréler avec surchauffe, E3, cycles anormaux."
   ], actions:["Repositionner/isolant", "Remplacer sonde si HS", "Diagnostic frigo si surchauffe"] },
 
-  // Autres courants (selon séries/écrans)
-  { code:"U6", title:"Erreur communication (liaison/perturbations – selon séries)", family:["mono","multi"], checks:[
-    "Vérifier interconnexion, terre, parasites, accessoires.",
-    "Multi : isoler UI."
-  ], actions:["Correction câblage/terre", "Diagnostic PCB"] },
-
-  { code:"F3", title:"Température refoulement anormale (protection – selon séries)", family:["mono","multi"], checks:[
+  { code:"F3", title:"Température refoulement anormale (selon séries)", family:["mono","multi"], checks:[
     "Contrôler ventilation UE, échangeur, charge/restriction.",
     "Contrôler sonde discharge (J3) et son contact."
   ], actions:["Nettoyage UE", "Diagnostic frigo", "Contrôle sonde"] },
-
-  { code:"L8", title:"Surcharge compresseur / protection", family:["mono","multi"], checks:[
-    "Contrôler alimentation, intensité, ventilation UE, charge/restriction.",
-    "Vérifier fonctionnement ventilateur UE.",
-    "Contrôler isolement si suspicion électrique."
-  ], actions:["Corriger cause surcharge", "Diagnostic inverter/compresseur"] },
-
-  { code:"P4", title:"Température dissipateur / IPM (selon séries)", family:["mono","multi"], checks:[
-    "Contrôler ventilations/circulation d’air coffret.",
-    "Vérifier propreté/dissipation thermique."
-  ], actions:["Nettoyage/ventilation", "Diagnostic inverter"] },
 
   { code:"OTHER", title:"Autre code", family:["mono","multi"], checks:[
     "Noter le code exact et la série (FTXM/RXM, 2MXM/3MXM/4MXM).",
@@ -427,7 +401,7 @@ const CODE_DB = [
 ];
 
 /* =========================
-   PARAMS & HELPERS
+   Helpers
    ========================= */
 function n(el){ const v=parseFloat(el.value); return Number.isFinite(v)?v:null; }
 function clamp(x,a,b){ return Math.max(a, Math.min(b, x)); }
@@ -437,7 +411,6 @@ function setPill(el, kind, text){
   if(kind) el.classList.add(kind);
 }
 function parseRange(s){
-  // "6-14" -> {min:6,max:14}
   const m = (s||"").trim().match(/^(-?\d+(?:\.\d+)?)\s*-\s*(-?\d+(?:\.\d+)?)$/);
   if(!m) return null;
   const a=parseFloat(m[1]), b=parseFloat(m[2]);
@@ -448,7 +421,7 @@ function fmt(x,d=1){ return (x===null||x===undefined) ? "—" : x.toFixed(d); }
 function inRange(x, lo, hi){ return x!==null && x>=lo && x<=hi; }
 
 /* =========================
-   UI REFS
+   UI refs
    ========================= */
 const fam = document.getElementById("fam");
 const mode = document.getElementById("mode");
@@ -493,22 +466,34 @@ const dtCool = document.getElementById("dtCool");
 const dtHeat = document.getElementById("dtHeat");
 
 /* =========================
-   Populate codes select
+   Params
+   ========================= */
+function getParams(){
+  const vt = clamp((parseFloat(vTol.value)||10)/100, 0.01, 0.30);
+  const imin = clamp(parseFloat(iMin.value)||0.60, 0.10, 1.50);
+  const imax = clamp(parseFloat(iMax.value)||1.30, 0.10, 3.00);
+  const cool = parseRange(dtCool.value) || {min:6, max:14};
+  const heat = parseRange(dtHeat.value) || {min:10, max:25};
+  return { vt, imin, imax, cool, heat };
+}
+
+/* =========================
+   Codes select (rebuild only on family change + init)
    ========================= */
 function rebuildCodeSelect(){
-  const f = fam.value || "mono"; // default filter if not chosen
+  const f = fam.value || "mono";
   const items = CODE_DB.filter(x => x.family.includes(f));
+
   codeSel.innerHTML = "";
+
   const opt0 = document.createElement("option");
   opt0.value = ""; opt0.textContent = "— choisir —";
   codeSel.appendChild(opt0);
 
-  // “Aucun / intermittent” (distinct de OTHER)
   const optNone = document.createElement("option");
   optNone.value = "NONE"; optNone.textContent = "Aucun / intermittent";
   codeSel.appendChild(optNone);
 
-  // Insert codes sorted
   items
     .filter(x => x.code !== "OTHER")
     .sort((a,b)=>a.code.localeCompare(b.code))
@@ -525,18 +510,17 @@ function rebuildCodeSelect(){
   codeSel.appendChild(optOther);
 }
 
-/* =========================
-   Core compute
-   ========================= */
-function getParams(){
-  const vt = clamp((parseFloat(vTol.value)||10)/100, 0.01, 0.30);
-  const imin = clamp(parseFloat(iMin.value)||0.60, 0.10, 1.50);
-  const imax = clamp(parseFloat(iMax.value)||1.30, 0.10, 3.00);
-  const cool = parseRange(dtCool.value) || {min:6, max:14};
-  const heat = parseRange(dtHeat.value) || {min:10, max:25};
-  return { vt, imin, imax, cool, heat };
+function safeRefreshSelectPreserve(){
+  const prev = codeSel.value;
+  rebuildCodeSelect();
+  const opts = Array.from(codeSel.options).map(o=>o.value);
+  if (opts.includes(prev)) codeSel.value = prev;
+  else codeSel.value = "";
 }
 
+/* =========================
+   Status computations
+   ========================= */
 function computeStatuses(){
   const p = getParams();
 
@@ -579,7 +563,6 @@ function computeStatuses(){
       setPill(iStatus, "ok", "OK");
       iKpi.textContent = "OK";
     } else {
-      // Inverter: warn (pas forcément panne)
       setPill(iStatus, "warn", "À vérifier");
       iKpi.textContent = "AV";
     }
@@ -605,7 +588,6 @@ function computeStatuses(){
     }
   }
 
-  // Code KPI
   codeKpi.textContent = codeSel.value ? codeSel.value : "—";
 }
 
@@ -613,12 +595,11 @@ function getSelectedCodeObj(){
   const c = codeSel.value;
   if(!c) return null;
   if(c === "NONE") return { code:"NONE", title:"Aucun / intermittent", checks:[], actions:[] };
-  const obj = CODE_DB.find(x=>x.code===c) || CODE_DB.find(x=>x.code==="OTHER");
-  return obj || null;
+  return CODE_DB.find(x=>x.code===c) || CODE_DB.find(x=>x.code==="OTHER") || null;
 }
 
 /* =========================
-   Build decision tree
+   Decision tree
    ========================= */
 function buildDecisionTree(){
   const lines = [];
@@ -626,7 +607,6 @@ function buildDecisionTree(){
   const m = mode.value;
   const cObj = getSelectedCodeObj();
 
-  // Base trunk
   lines.push("Étape 0 — Sécurité / prérequis : consignation, EPI, contrôle visuel (encrassement, borniers, traces d’huile, évacuation).");
   lines.push("Étape 1 — Vérifier réglages : mode, consigne, vitesse ventilateur, absence de verrouillage, filtres propres.");
 
@@ -642,8 +622,8 @@ function buildDecisionTree(){
     lines.push("Étape 2 — Alimentation : mesurer U au bornier UE (si possible en charge).");
   }
 
-  // Code-driven branch
-  if(!cObj || !cObj.code || cObj.code==="NONE"){
+  // Code-driven
+  if(!cObj || cObj.code==="NONE"){
     lines.push("Étape 3 — Pas de code : vérifier si UE démarre (ventilo/compresseur).");
     lines.push("• Si UE ne démarre pas : contrôler communication (liaison), cartes, alimentation, protections.");
     lines.push("• Si UE démarre puis coupe : relever I comp, U, et observer comportement (déclenchement, bruit, givre).");
@@ -652,8 +632,8 @@ function buildDecisionTree(){
     lines.push("• ΔT très élevé + débit faible : risque antigivre → nettoyer UI, turbine, échangeur.");
   } else {
     lines.push(`Étape 3 — Code prioritaire : ${cObj.code} — ${cObj.title}`);
-    // Add per-code key logic
-    if(cObj.code==="U4" || cObj.code==="U6"){
+
+    if(cObj.code==="U4"){
       lines.push("• Contrôler liaison UI↔UE (continuité/polarité/serrage/oxydation).");
       if(f==="multi") lines.push("• Multi : isoler UI une par une pour trouver celle qui perturbe.");
       lines.push("• Si câblage OK : suspicion PCB communication ou perturbations CEM/terre.");
@@ -673,8 +653,8 @@ function buildDecisionTree(){
       lines.push("• Contrôle sonde échangeur UI (fixation, contact thermique).");
       lines.push("• Si récurrent : suspicion manque charge/restriction.");
     } else if(["C9","C4","H9","J3"].includes(cObj.code)){
-      lines.push("• Débrancher sonde si possible et mesurer résistance.");
-      lines.push("• Comparer à table constructeur du modèle (à intégrer si dispo).");
+      lines.push("• Mesurer résistance sonde (déconnectée si possible).");
+      lines.push("• Comparer à table constructeur du modèle.");
       lines.push("• Contrôler connectique/position/isolant.");
     } else if(cObj.code==="A3"){
       lines.push("• Contrôle évacuation : pente, bouchon, siphon, bac, pompe/flotteur.");
@@ -683,13 +663,11 @@ function buildDecisionTree(){
     }
   }
 
-  // Mode-specific closure
   if(m==="heat"){
-    lines.push("Étape 5 — Chauffage : surveiller dégivrage (T° ext, cycles), s’assurer que le ventilo UE et la sonde ext sont cohérents.");
+    lines.push("Étape 5 — Chauffage : surveiller dégivrage (T° ext, cycles) + cohérence sonde ext.");
   }
   lines.push("Étape 6 — Contrôle final : essais 15 min, relevés finaux, CR client.");
 
-  // Render
   const ol = document.createElement("ol");
   lines.forEach(t=>{ const li=document.createElement("li"); li.textContent=t; ol.appendChild(li); });
   decisionTree.innerHTML = "";
@@ -697,7 +675,7 @@ function buildDecisionTree(){
 }
 
 /* =========================
-   Code details panel
+   Code details
    ========================= */
 function renderCodeDetails(){
   const obj = getSelectedCodeObj();
@@ -712,11 +690,10 @@ function renderCodeDetails(){
         <ul>
           <li>Vérifier si UE démarre (ventilo UE, compresseur).</li>
           <li>Mesurer U au bornier UE en charge.</li>
-          <li>Mesurer I compresseur (si possible) et observer coupure.</li>
+          <li>Mesurer I compresseur (si possible) et observer la coupure.</li>
           <li>Mesurer ΔT air (reprise/soufflage) et vérifier débit air UI.</li>
           <li>Si multi : isoler une UI à la fois pour localiser la perturbation.</li>
         </ul>
-        <div class="small">Conseil : note les temps (démarrage → coupure) et les symptômes (givre, bruit, clignotement, disjonction).</div>
       </details>
     `;
     return;
@@ -728,21 +705,17 @@ function renderCodeDetails(){
   codeDetails.innerHTML = `
     <details open>
       <summary>${obj.code} — ${obj.title}</summary>
-      <div class="small" style="margin-top:6px;">Famille : ${obj.family.includes("multi") && obj.family.includes("mono") ? "mono + multi" : (obj.family.includes("multi") ? "multi" : "mono")}</div>
       <hr>
       <div style="font-weight:700;">Contrôles / diagnostic (étapes)</div>
       <ul>${checks || "<li>—</li>"}</ul>
       <div style="font-weight:700; margin-top:10px;">Actions correctives</div>
       <ul>${actions || "<li>—</li>"}</ul>
-      <div class="small" style="margin-top:10px;">
-        Astuce : si tu veux des valeurs “constructeur” strictes, ajoute la table/critères du service manual correspondant à la série (FTXM/RXM, 2MXM/3MXM/4MXM).
-      </div>
     </details>
   `;
 }
 
 /* =========================
-   Report generator
+   Report
    ========================= */
 function buildReportText(){
   const now = new Date();
@@ -785,8 +758,7 @@ function buildReportText(){
   lines.push(`- T reprise : ${Tr} °C | T soufflage : ${Ts} °C | ΔT : ${deltaT} °C | T ext : ${To} °C`);
 
   lines.push("");
-  lines.push("Arbre de décision / procédure appliquée :");
-  // Reuse current decision tree lines from DOM (ol>li)
+  lines.push("Arbre de décision / procédure :");
   const li = decisionTree.querySelectorAll("li");
   if(li && li.length){
     li.forEach((x)=> lines.push(`- ${x.textContent}`));
@@ -809,21 +781,15 @@ function buildReportText(){
   return lines.join("\n");
 }
 
+/* =========================
+   Refresh (FIXED)
+   - IMPORTANT: Ne reconstruit PAS la liste des codes ici.
+   ========================= */
 function refreshAll(){
-  rebuildCodeSelect(); // keep select aligned to family
   computeStatuses();
   buildDecisionTree();
   renderCodeDetails();
-
   reportPreview.textContent = buildReportText();
-}
-
-function safeRefreshSelectPreserve(){
-  const prev = codeSel.value;
-  rebuildCodeSelect();
-  // attempt restore
-  const opts = Array.from(codeSel.options).map(o=>o.value);
-  if(opts.includes(prev)) codeSel.value = prev;
 }
 
 function resetForm(){
@@ -840,19 +806,21 @@ function resetForm(){
   tSupply.value = "";
   tOutdoor.value = "";
   codeSel.value = "";
-  // params keep
   safeRefreshSelectPreserve();
   refreshAll();
 }
 
 /* =========================
-   Events
+   Events (FIXED)
+   - Rebuild codes ONLY when fam changes
    ========================= */
-[fam, mode].forEach(el=>{
-  el.addEventListener("change", ()=>{
-    safeRefreshSelectPreserve();
-    refreshAll();
-  });
+fam.addEventListener("change", () => {
+  safeRefreshSelectPreserve();
+  refreshAll();
+});
+
+mode.addEventListener("change", () => {
+  refreshAll();
 });
 
 [
