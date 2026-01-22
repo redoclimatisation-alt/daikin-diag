@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Daikin Diagnostic – Version simple</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f6f7fb;
+      color: #111;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 16px;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    select, input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+
+    button {
+      background: #111;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #333;
+    }
+
+    ul {
+      margin-top: 8px;
+      padding-left: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Daikin – Assistant de dépannage (version simple)</h1>
+
+    <div class="card">
+      <label for="famille">Type d’installation</label>
+      <select id="famille">
+        <option value="">— choisir —</option>
+        <option value="mono">FTXM / RXM (mono)</option>
+        <option value="multi">2MXM / 3MXM / 4MXM (multi)</option>
+      </select>
+
+      <label for="mode">Mode demandé</label>
+      <select id="mode">
+        <option value="">— choisir —</option>
+        <option value="froid">Froid</option>
+        <option value="chaud">Chaud</option>
+      </select>
+
+      <label for="code">Code défaut (si présent)</label>
+      <select id="code">
+        <option value="">— choisir —</option>
+        <option value="aucun">Aucun code</option>
+        <option value="U4">U4 – Communication</option>
+        <option value="U0">U0 – Circuit frigorifique</option>
+        <option value="L5">L5 – Inverter / IPM</option>
+        <option value="E3">E3 – Haute pression</option>
+        <option value="A5">A5 – Antigivre UI</option>
+        <option value="C9">C9 – Sonde air UI</option>
+        <option value="C4">C4 – Sonde échangeur UI</option>
+      </select>
+
+      <button onclick="generer()">Afficher la logique de dépannage</button>
+    </div>
+
+    <div class="card">
+      <h2>Étapes de diagnostic</h2>
+      <ul id="resultat">
+        <li>Renseigne les champs puis clique sur le bouton.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    function generer() {
+      const famille = document.getElementById("famille").value;
+      const mode = document.getElementById("mode").value;
+      const code = document.getElementById("code").value;
+      const ul = document.getElementById("resultat");
+
+      ul.innerHTML = "";
+
+      if (!famille || !mode) {
+        ul.innerHTML = "<li>Merci de sélectionner le type d’installation et le mode.</li>";
+        return;
+      }
+
+      ul.innerHTML += "<li>✔️ Vérifier réglages télécommande (mode, consigne, verrouillage).</li>";
+      ul.innerHTML += "<li>✔️ Contrôler filtres et échangeur unité intérieure.</li>";
+
+      if (code === "aucun") {
+        ul.innerHTML += "<li>✔️ Vérifier démarrage unité extérieure.</li>";
+        ul.innerHTML += "<li>✔️ Mesurer ΔT air (reprise / soufflage).</li>";
+        ul.innerHTML += "<li>✔️ Si ΔT faible : débit air → charge → détendeur.</li>";
+      }
+
+      if (code === "U4") {
+        ul.innerHTML += "<li>⚠️ Contrôler liaison inter-unités (polarité, continuité).</li>";
+        ul.innerHTML += "<li>⚠️ Vérifier terres et parasites électriques.</li>";
+      }
+
+      if (code === "U0") {
+        ul.innerHTML += "<li>⚠️ Suspecter manque de charge ou restriction.</li>";
+        ul.innerHTML += "<li>⚠️ Recherche de fuite + recharge au poids.</li>";
+      }
+
+      if (code === "L5") {
+        ul.innerHTML += "<li>⚠️ Contrôler IPM / carte inverter.</li>";
+        ul.innerHTML += "<li>⚠️ Tester isolement compresseur (mégohmmètre).</li>";
+      }
+
+      if (code === "A5") {
+        ul.innerHTML += "<li>⚠️ Contrôler débit air UI.</li>";
+        ul.innerHTML += "<li>⚠️ Tester sonde échangeur (ohmique).</li>";
+      }
+
+      ul.innerHTML += "<li>✔️ Essai fonctionnement 15 min après correction.</li>";
+    }
+  </script>
+</body>
+</html>
